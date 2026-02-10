@@ -483,4 +483,14 @@ public enum LogType
     /// Events related to players connecting/disconnecting.
     /// </summary>
     Connection = 104,
+
+    /// <summary>
+    /// Events related to shuttle piloting (piloting, unpiloting)
+    /// </summary>
+    Pilot = 105,
+
+    /// <summary>
+    /// Events related to FTL travel
+    /// </summary>
+    FTL = 106,
 }

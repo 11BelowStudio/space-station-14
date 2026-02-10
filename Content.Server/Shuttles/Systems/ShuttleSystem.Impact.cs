@@ -20,6 +20,7 @@ using Robust.Shared.Physics.Events;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using System.Numerics;
+using System.Text;
 using Content.Shared.Damage.Components;
 
 namespace Content.Server.Shuttles.Systems;
@@ -114,11 +115,14 @@ public sealed partial class ShuttleSystem
         {
             var worldPoint = worldPoints[i];
 
-            var ourPoint = _transform.ToCoordinates((args.OurEntity, ourXform), new MapCoordinates(worldPoint, ourXform.MapID));
-            var otherPoint = _transform.ToCoordinates((args.OtherEntity, otherXform), new MapCoordinates(worldPoint, otherXform.MapID));
+            var ourPoint = _transform.ToCoordinates((args.OurEntity, ourXform),
+                new MapCoordinates(worldPoint, ourXform.MapID));
+            var otherPoint = _transform.ToCoordinates((args.OtherEntity, otherXform),
+                new MapCoordinates(worldPoint, otherXform.MapID));
 
             var ourVelocity = _physics.GetLinearVelocity(args.OurEntity, ourPoint.Position, ourBody, ourXform);
-            var otherVelocity = _physics.GetLinearVelocity(args.OtherEntity, otherPoint.Position, otherBody, otherXform);
+            var otherVelocity =
+                _physics.GetLinearVelocity(args.OtherEntity, otherPoint.Position, otherBody, otherXform);
             var topDiff = (ourVelocity - otherVelocity);
             var jungleDiff = topDiff.Length();
 
@@ -129,7 +133,8 @@ public sealed partial class ShuttleSystem
             jungleDiff *= dotProduct;
 
             // this is cursed but makes it so that collisions of small grid with large grid count the inertia as being approximately the small grid's
-            var effectiveInertiaMult = (ourBody.FixturesMass * otherBody.FixturesMass) / (ourBody.FixturesMass + otherBody.FixturesMass);
+            var effectiveInertiaMult = (ourBody.FixturesMass * otherBody.FixturesMass) /
+                                       (ourBody.FixturesMass + otherBody.FixturesMass);
             var effectiveInertia = jungleDiff * effectiveInertiaMult;
 
             // TODO: squish damage so that a tiny splinter grid can't stop 2 big grids by being in the way
@@ -144,7 +149,8 @@ public sealed partial class ShuttleSystem
             var coordinates = new EntityCoordinates(ourXform.MapUid.Value, worldPoint);
 
             var volume = MathF.Min(10f, MathF.Pow(jungleDiff, 0.5f) - 5f);
-            var audioParams = AudioParams.Default.WithVariation(SharedContentAudioSystem.DefaultVariation).WithVolume(volume);
+            var audioParams = AudioParams.Default.WithVariation(SharedContentAudioSystem.DefaultVariation)
+                .WithVolume(volume);
             _audio.PlayPvs(_shuttleImpactSound, coordinates, audioParams);
 
             // if we're not enabled, stop after playing sound
@@ -152,8 +158,10 @@ public sealed partial class ShuttleSystem
                 continue;
 
             // Convert the collision point directly to tile indices
-            var ourTile = new Vector2i((int)Math.Floor(ourPoint.X / ourGrid.TileSize), (int)Math.Floor(ourPoint.Y / ourGrid.TileSize));
-            var otherTile = new Vector2i((int)Math.Floor(otherPoint.X / otherGrid.TileSize), (int)Math.Floor(otherPoint.Y / otherGrid.TileSize));
+            var ourTile = new Vector2i((int)Math.Floor(ourPoint.X / ourGrid.TileSize),
+                (int)Math.Floor(ourPoint.Y / ourGrid.TileSize));
+            var otherTile = new Vector2i((int)Math.Floor(otherPoint.X / otherGrid.TileSize),
+                (int)Math.Floor(otherPoint.Y / otherGrid.TileSize));
 
             var ourMass = GetRegionMass(args.OurEntity, ourGrid, ourTile, _impactRadius, out var ourTiles);
             var otherMass = GetRegionMass(args.OtherEntity, otherGrid, otherTile, _impactRadius, out var otherTiles);
@@ -162,7 +170,8 @@ public sealed partial class ShuttleSystem
             if (ourTiles == 0 || otherTiles == 0)
                 continue;
 
-            Log.Info($"Shuttle impact of {ToPrettyString(args.OurEntity)} with {ToPrettyString(args.OtherEntity)}; our mass: {ourMass}, other: {otherMass}, velocity {jungleDiff}, impact point {worldPoint}");
+            Log.Info(
+                $"Shuttle impact of {ToPrettyString(args.OurEntity)} with {ToPrettyString(args.OtherEntity)}; our mass: {ourMass}, other: {otherMass}, velocity {jungleDiff}, impact point {worldPoint}");
 
             // E = MV^2/2
             var energyMult = MathF.Pow(jungleDiff, 2) / 2;
@@ -180,7 +189,21 @@ public sealed partial class ShuttleSystem
                 impact = LogImpact.Extreme;
             // TODO: would be nice for it to also log who is piloting the grid(s)
             if (CheckShouldLog(args.OurEntity) && CheckShouldLog(args.OtherEntity))
-                _logger.Add(LogType.ShuttleImpact, impact, $"Shuttle impact of {ToPrettyString(args.OurEntity)} with {ToPrettyString(args.OtherEntity)} at {worldPoint}");
+            {
+                var ourEntityString = $"{ToPrettyString(args.OurEntity)}";
+                if (_console.TryGetGridPilot(args.OurEntity, out var ourPilot))
+                {
+                    ourEntityString += $" [piloted by {ToPrettyString(ourPilot)}]";
+                }
+
+                var otherEntityString = $"{ToPrettyString(args.OtherEntity)}";
+                if (_console.TryGetGridPilot(args.OtherEntity, out var otherPilot))
+                {
+                    otherEntityString += $" [piloted by {ToPrettyString(otherPilot)}]";
+                }
+
+                _logger.Add(LogType.ShuttleImpact, impact, $"Shuttle impact of {ourEntityString} with {otherEntityString} at {worldPoint}");
+            }
 
             _impactedAt[args.OurEntity] = _gameTiming.CurTime;
             _impactedAt[args.OtherEntity] = _gameTiming.CurTime;

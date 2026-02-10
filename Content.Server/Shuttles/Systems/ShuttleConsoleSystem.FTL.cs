@@ -1,5 +1,6 @@
 using Content.Server.Shuttles.Components;
 using Content.Server.Shuttles.Events;
+using Content.Shared.Database;
 using Content.Shared.Shuttles.BUIStates;
 using Content.Shared.Shuttles.Components;
 using Content.Shared.Shuttles.Events;
@@ -163,5 +164,16 @@ public sealed partial class ShuttleConsoleSystem
         RaiseLocalEvent(ref ev);
 
         _shuttle.FTLToCoordinates(shuttleUid.Value, shuttleComp, adjustedCoordinates, targetAngle);
+
+        foreach (var pilot in ent.Comp.SubscribedPilots)
+        {
+            _adminLogger.Add(
+                LogType.FTL,
+                LogImpact.Low,
+                $"{ToPrettyString(pilot):user} attempted to FTL {shuttleUid.Value} using {consoleUid.Value} to {targetCoordinates}"
+            );
+        }
+
+
     }
 }

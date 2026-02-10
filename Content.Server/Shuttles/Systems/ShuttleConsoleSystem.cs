@@ -6,6 +6,7 @@ using Content.Server.Station.Systems;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Alert;
+using Content.Shared.Database;
 using Content.Shared.Popups;
 using Content.Shared.Shuttles.BUIStates;
 using Content.Shared.Shuttles.Components;
@@ -197,6 +198,38 @@ public sealed partial class ShuttleConsoleSystem : SharedShuttleConsoleSystem
         return true;
     }
 
+    public bool TryGetConsolePilots(EntityUid consoleId, out IEnumerator<EntityUid>? pilotUids)
+    {
+        if (TryComp(consoleId, out ShuttleConsoleComponent? console))
+        {
+            pilotUids = console.SubscribedPilots.GetEnumerator();
+            return true;
+        }
+        pilotUids = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get the first pilot associated with a given grid
+    /// </summary>
+    public bool TryGetGridPilot(EntityUid gridUid, out EntityUid? pilotUid)
+    {
+        var exclusions = new List<ShuttleExclusionObject>();
+        GetExclusions(ref exclusions);
+        _consoles.Clear();
+        _lookup.GetChildEntities(gridUid, _consoles);
+        foreach (var entity in _consoles)
+        {
+            if (entity.Comp.SubscribedPilots.TryGetValue(0,  out var pilot))
+            {
+                pilotUid = pilot;
+                return true;
+            }
+        }
+        pilotUid = null;
+        return false;
+    }
+
     private void OnGetState(EntityUid uid, PilotComponent component, ref ComponentGetState args)
     {
         args.State = new PilotComponentState(GetNetEntity(component.Console));
@@ -339,6 +372,25 @@ public sealed partial class ShuttleConsoleSystem : SharedShuttleConsoleSystem
         ActionBlockerSystem.UpdateCanMove(entity);
         pilotComponent.Position = Comp<TransformComponent>(entity).Coordinates;
         Dirty(entity, pilotComponent);
+
+        if (TryComp(uid, out TransformComponent? consoleXform))
+        {
+            var shuttleGridUid = consoleXform?.GridUid;
+            _adminLogger.Add(
+                LogType.Pilot,
+                LogImpact.Low,
+                $"{ToPrettyString(entity):user} started piloting {ToPrettyString(shuttleGridUid)} using {ToPrettyString(uid)}"
+            );
+        }
+        else
+        {
+            _adminLogger.Add(
+                LogType.Pilot,
+                LogImpact.Low,
+                $"{ToPrettyString(entity):user} started piloting using {ToPrettyString(uid)}"
+            );
+        }
+
     }
 
     public void RemovePilot(EntityUid pilotUid, PilotComponent pilotComponent)
@@ -361,6 +413,24 @@ public sealed partial class ShuttleConsoleSystem : SharedShuttleConsoleSystem
 
         if (pilotComponent.LifeStage < ComponentLifeStage.Stopping)
             RemComp<PilotComponent>(pilotUid);
+
+        if (TryComp(console, out TransformComponent? consoleXform))
+        {
+            var shuttleGridUid = consoleXform?.GridUid;
+            _adminLogger.Add(
+                        LogType.Pilot,
+                        LogImpact.Low,
+                        $"{ToPrettyString(pilotUid):user} stopped piloting {ToPrettyString(shuttleGridUid)} using {ToPrettyString(console)}"
+                    );
+        }
+        else
+        {
+            _adminLogger.Add(
+                LogType.Pilot,
+                LogImpact.Low,
+                $"{ToPrettyString(pilotUid):user} stopped piloting using {ToPrettyString(console)}"
+            );
+        }
     }
 
     public void RemovePilot(EntityUid entity)
