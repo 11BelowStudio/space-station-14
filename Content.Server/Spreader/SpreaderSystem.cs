@@ -10,6 +10,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Server.Spreader;
@@ -24,6 +25,7 @@ public sealed class SpreaderSystem : EntitySystem
     [Dependency] private readonly SharedMapSystem _map = default!;
     [Dependency] private readonly TagSystem _tag = default!;
     [Dependency] private readonly TurfSystem _turf = default!;
+    [Dependency] private readonly IGameTiming _timing = default!;
 
     /// <summary>
     /// Cached maximum number of updates per spreader prototype. This is applied per-grid.
@@ -38,7 +40,7 @@ public sealed class SpreaderSystem : EntitySystem
 
     private EntityQuery<EdgeSpreaderComponent> _query;
 
-    public const float SpreadCooldownSeconds = 1;
+    private TimeSpan _spreadInterval = TimeSpan.FromSeconds(1);
 
     private static readonly ProtoId<TagPrototype> IgnoredTag = "SpreaderIgnore";
 
@@ -64,10 +66,17 @@ public sealed class SpreaderSystem : EntitySystem
     private void SetupPrototypes()
     {
         _prototypeUpdates = [];
+        var maxUpdates = 1;
         foreach (var proto in _prototype.EnumeratePrototypes<EdgeSpreaderPrototype>())
         {
             _prototypeUpdates.Add(proto.ID, proto.UpdatesPerSecond);
+            if (proto.UpdatesPerSecond > maxUpdates)
+            {
+                maxUpdates = proto.UpdatesPerSecond;
+            }
         }
+        _spreadInterval = TimeSpan.FromSeconds(1f / maxUpdates);
+
     }
 
     private void OnAirtightChanged(ref AirtightChanged ev)
@@ -88,36 +97,53 @@ public sealed class SpreaderSystem : EntitySystem
     /// <inheritdoc/>
     public override void Update(float frameTime)
     {
+        var curTime = _timing.CurTime;
+
+
+        var query = EntityQueryEnumerator<ActiveEdgeSpreaderComponent>();
+        //var xforms = GetEntityQuery<TransformComponent>();
+        //var spreaderQuery = GetEntityQuery<EdgeSpreaderComponent>();
+
+        var spreaders = new List<(EntityUid Uid, ActiveEdgeSpreaderComponent Comp)>(Count<ActiveEdgeSpreaderComponent>());
+
+        // Build a list of all existing ActiveEdgeSpreaders which have their NextSpreadTime due (will shuffle it momentarily)
+        while (query.MoveNext(out var uid, out var comp))
+        {
+            if (comp.NextSpreadTime > curTime)
+                continue;
+            spreaders.Add((uid, comp));
+        }
+        if (spreaders.Count == 0)
+            return;
+
+        _robustRandom.Shuffle(spreaders);
+
+        var xforms = GetEntityQuery<TransformComponent>();
+        var spreaderQuery = GetEntityQuery<EdgeSpreaderComponent>();
+
         // Check which grids are valid for spreading
         var spreadGrids = EntityQueryEnumerator<SpreaderGridComponent>();
 
         _gridUpdates.Clear();
         while (spreadGrids.MoveNext(out var uid, out var grid))
         {
-            grid.UpdateAccumulator -= frameTime;
-            if (grid.UpdateAccumulator > 0)
-                continue;
 
+            //grid.UpdateAccumulator -= frameTime;
+            //if (grid.UpdateAccumulator > 0)
+            //    continue;
             _gridUpdates[uid] = _prototypeUpdates.ShallowClone();
-            grid.UpdateAccumulator += SpreadCooldownSeconds;
+            //grid.UpdateAccumulator += grid.SpreadCooldownSeconds;
+
+            /*
+            if (!grid.PendingRelease || grid.NextSpreadTime > curTime)
+                continue;
+            _gridUpdates[uid] = _prototypeUpdates.ShallowClone();
+            grid.PendingRelease = false;
+            */
         }
 
         if (_gridUpdates.Count == 0)
             return;
-
-        var query = EntityQueryEnumerator<ActiveEdgeSpreaderComponent>();
-        var xforms = GetEntityQuery<TransformComponent>();
-        var spreaderQuery = GetEntityQuery<EdgeSpreaderComponent>();
-
-        var spreaders = new List<(EntityUid Uid, ActiveEdgeSpreaderComponent Comp)>(Count<ActiveEdgeSpreaderComponent>());
-
-        // Build a list of all existing Edgespreaders, shuffle them
-        while (query.MoveNext(out var uid, out var comp))
-        {
-            spreaders.Add((uid, comp));
-        }
-
-        _robustRandom.Shuffle(spreaders);
 
         // Remove the EdgeSpreaderComponent from any entity
         // that doesn't meet a few trivial prerequisites
@@ -155,6 +181,33 @@ public sealed class SpreaderSystem : EntitySystem
             else
                 groupUpdates[spreader.Id] = updates;
         }
+
+        return;
+
+
+        // Check which grids are valid for spreading
+        //var spreadGrids = EntityQueryEnumerator<SpreaderGridComponent>();
+
+        _gridUpdates.Clear();
+        while (spreadGrids.MoveNext(out var uid, out var grid))
+        {
+
+            //grid.UpdateAccumulator -= frameTime;
+            //if (grid.UpdateAccumulator > 0)
+            //    continue;
+            //_gridUpdates[uid] = _prototypeUpdates.ShallowClone();
+            //grid.UpdateAccumulator += grid.SpreadCooldownSeconds;
+
+            /*
+            if (!grid.PendingRelease || grid.NextSpreadTime > curTime)
+                continue;
+            _gridUpdates[uid] = _prototypeUpdates.ShallowClone();
+            grid.PendingRelease = false;
+            */
+        }
+
+        if (_gridUpdates.Count == 0)
+            return;
     }
 
     private void Spread(EntityUid uid, TransformComponent xform, ProtoId<EdgeSpreaderPrototype> prototype, ref int updates)
@@ -295,6 +348,7 @@ public sealed class SpreaderSystem : EntitySystem
     /// This function activates all spreaders that are adjacent to a given entity. This also activates other spreaders
     /// on the same tile as the current entity (for thin airtight entities like windoors).
     /// </summary>
+    /// <param name="origin">UID of EdgeSpreaderComponent when position is null. Otherwise, UID of AirtightChanged.Entity</param>
     public void ActivateSpreadableNeighbors(EntityUid origin, (EntityUid Grid, Vector2i Tile)? position = null)
     {
         Vector2i tile;
@@ -317,6 +371,16 @@ public sealed class SpreaderSystem : EntitySystem
             (gridUid, tile) = position.Value;
         }
 
+        if (!TryComp(origin, out EdgeSpreaderComponent? sourceSpreader))
+            return;
+        TimeSpan nextEmission = _timing.CurTime +
+                                TimeSpan.FromSeconds(1f / _prototype.Index<EdgeSpreaderPrototype>(sourceSpreader.Id)
+                                    .UpdatesPerSecond);
+
+        SpreaderGridComponent? spreaderGrid;
+        if (!TryComp(gridUid, out spreaderGrid))
+            return;
+
         var anchored = _map.GetAnchoredEntitiesEnumerator(gridUid, gridComp, tile);
         while (anchored.MoveNext(out var entity))
         {
@@ -326,8 +390,22 @@ public sealed class SpreaderSystem : EntitySystem
             DebugTools.Assert(Transform(entity.Value).Anchored);
 
             // Activate any edge spreaders that are non-terminating
+            if (_query.TryGetComponent(entity, out var edge) && !TerminatingOrDeleted(entity))
+            {
+
+            }
+
             if (_query.HasComponent(entity) && !TerminatingOrDeleted(entity))
-                EnsureComp<ActiveEdgeSpreaderComponent>(entity.Value);
+            {
+                EnsureComp<ActiveEdgeSpreaderComponent>(entity.Value).NextSpreadTime = nextEmission;
+                /*
+                 if (spreaderGrid.PendingRelease && spreaderGrid.NextSpreadTime <= nextEmission)
+                    continue;
+                spreaderGrid.NextSpreadTime = nextEmission;
+                spreaderGrid.PendingRelease = true;
+                */
+            }
+
         }
 
         for (var i = 0; i < Atmospherics.Directions; i++)
@@ -341,8 +419,17 @@ public sealed class SpreaderSystem : EntitySystem
                 DebugTools.Assert(Transform(entity.Value).Anchored);
 
                 // Activate any edge spreaders that are non-terminating
+                // Activate any edge spreaders that are non-terminating
                 if (_query.HasComponent(entity) && !TerminatingOrDeleted(entity))
-                    EnsureComp<ActiveEdgeSpreaderComponent>(entity.Value);
+                {
+                    EnsureComp<ActiveEdgeSpreaderComponent>(entity.Value).NextSpreadTime = nextEmission;
+                    /*
+                    if (spreaderGrid.PendingRelease && spreaderGrid.NextSpreadTime <= nextEmission)
+                        continue;
+                    spreaderGrid.NextSpreadTime = nextEmission;
+                    spreaderGrid.PendingRelease = true;
+                    */
+                }
             }
         }
     }

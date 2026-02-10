@@ -1,3 +1,5 @@
+using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
+
 namespace Content.Server.Spreader;
 
 /// <summary>
@@ -5,6 +7,14 @@ namespace Content.Server.Spreader;
 /// This needs to be manually added and removed.
 /// </summary>
 [RegisterComponent]
+[AutoGenerateComponentPause]
 public sealed partial class ActiveEdgeSpreaderComponent : Component
 {
+    /// <summary>
+    /// Time at which the next spread will occur.
+    /// This is automatically set when the grenade activates.
+    /// </summary>
+    [DataField(customTypeSerializer: typeof(TimeOffsetSerializer))]
+    [AutoPausedField]
+    public TimeSpan NextSpreadTime;
 }
