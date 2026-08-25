@@ -20,21 +20,19 @@ public sealed partial class ClumsyHoldStatusEffectComponent : Component
     /// </summary>
     /// <value> Parameters passed in:
     /// <list type="bullet">
-    ///     <item><c>item</c> - The item failed to be caught.</item>
     /// </list>
     /// </value>
     [DataField]
-    public LocId? SelfFailedMessage = "clumsy-catch-fail-message-user";
+    public LocId? SelfFailedMessage = "clumsy-hold-fail-message-user ";
 
     /// <summary>
     /// Popup played to others when the afflicted fails.
     /// </summary>
     /// <value> Parameters passed in:
     /// <list type="bullet">
-    ///     <item><c>item</c> - The item failed to be caught.</item>
-    ///     <item><c>catcher</c> - The entity failing the catch.</item>
+    ///     <item><c>holder</c> - The entity failing to hold the thing.</item>
     /// </list>
     /// </value>
     [DataField]
-    public LocId? OtherFailedMessage = "clumsy-catch-fail-message-others";
+    public LocId? OtherFailedMessage = "clumsy-hold-fail-message-others";
 }

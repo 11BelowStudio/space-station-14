@@ -12,6 +12,8 @@ public static class ClumsyTestPrototypes
     public const string BallProto = "BallProto";
     public const string DefibProto = "DefibProto";
     public const string TableProto = "TableProto";
+    
+    public const string ClumsyHandsProto = "ClumsyHandsProto";
 
     [TestPrototypes]
     public static readonly string ClumsyPrototypes = @$"
@@ -55,5 +57,12 @@ public static class ClumsyTestPrototypes
   components:
   - type: Climbable
   - type: Bonkable
+
+- type: entity
+  id: {ClumsyHandsProto}
+  components:
+  - type: StatusEffect
+  - type: ClumsyHoldStatusEffect
+    clumsyChance: 1
 ";
 }

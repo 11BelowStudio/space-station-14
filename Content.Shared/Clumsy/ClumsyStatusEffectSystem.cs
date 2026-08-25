@@ -123,6 +123,24 @@ public sealed partial class ClumsyStatusEffectSystem : EntitySystem
     private void OnEquippedHandEvent(Entity<ClumsyHoldStatusEffectComponent> status,
         ref StatusEffectRelayedEvent<EquippedHandEvent> args)
     {
+        /*
+        if (args.Args.Cancelled
+            || !SharedRandomExtensions.PredictedProb(_timing, status.Comp.ClumsyChance, GetNetEntity(status), GetNetEntity(args.AppliedTo)))
+            return;
+        
+        var ev = args.Args;
+
+        ev.Cancelled = true;
+        args.Args = ev;
+
+        var selfMessage = status.Comp.SelfFailedMessage == null
+            ? null
+            : Loc.GetString(status.Comp.SelfFailedMessage);
+        var othersMessage = status.Comp.OtherFailedMessage == null
+            ? null
+            : Loc.GetString(status.Comp.OtherFailedMessage, ("holder", args.Args.User));
+        
+        _popup.PopupEntity(selfMessage, othersMessage, args.AppliedTo, args.AppliedTo);*/
         if (!SharedRandomExtensions.PredictedProb(_timing, status.Comp.ClumsyChance, GetNetEntity(status),
                 GetNetEntity(args.AppliedTo)))
         {
@@ -141,10 +159,10 @@ public sealed partial class ClumsyStatusEffectSystem : EntitySystem
 
         var selfMessage = status.Comp.SelfFailedMessage == null
             ? null
-            : Loc.GetString(status.Comp.SelfFailedMessage, ("item", args.Args.Equipped));
+            : Loc.GetString(status.Comp.SelfFailedMessage);
         var othersMessage = status.Comp.OtherFailedMessage == null
             ? null
-            : Loc.GetString(status.Comp.OtherFailedMessage, ("item", args.Args.Equipped), ("catcher", identity));
+            : Loc.GetString(status.Comp.OtherFailedMessage, ("holder", args.Args.User));
         
         _popup.PopupEntity(selfMessage, othersMessage, args.AppliedTo, args.AppliedTo);
         

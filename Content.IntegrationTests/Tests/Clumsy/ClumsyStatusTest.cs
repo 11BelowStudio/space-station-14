@@ -1,4 +1,5 @@
 using System.Numerics;
+using Content.Client.Hands.Systems;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.IntegrationTests.Tests.Helpers;
 using Content.IntegrationTests.Tests.Interaction;
@@ -8,6 +9,8 @@ using Content.Shared.Climbing.Components;
 using Content.Shared.Climbing.Events;
 using Content.Shared.Climbing.Systems;
 using Content.Shared.Clumsy;
+using Content.Shared.Hands;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Medical;
 using Content.Shared.Mobs.Components;
 using Content.Shared.StatusEffectNew;
@@ -32,6 +35,7 @@ public sealed class ClumsyStatusTest : InteractionTest
     [SidedDependency(Side.Server)] private readonly ClimbSystem _sClimbSystem = default!;
     [SidedDependency(Side.Server)] private readonly StatusEffectsSystem _sStatusSystem = default!;
     [SidedDependency(Side.Server)] private readonly ThrowingSystem _sThrowSystem = default!;
+    [SidedDependency(Side.Server)] private readonly SharedHandsSystem _sHandsSystem = default!;
 
     [Test, Description("Test that a ball thrown at someone clumsy is not caught.")]
     public async Task TestClumsyCatch()
@@ -163,5 +167,31 @@ public sealed class ClumsyStatusTest : InteractionTest
         {
             Assert.That(ev.Cancelled, Is.True, "Clumsy mob didn't cancel climb event.");
         }
+    }
+    
+    [Test, Description("Test that a mob with the ClumsyHold status will drop things.")]
+    public async Task TestClumsyHold()
+    {
+        await Server.WaitPost(() =>
+        {
+            SEntMan.EnsureComponent<TestListenerComponent>(SPlayer);
+            _sStatusSystem.TrySetStatusEffectDuration(SPlayer, ClumsyHandsProto);
+        });
+
+        Assume.That(_sStatusSystem.HasStatusEffect(SPlayer, ClumsyHandsProto), Is.True);
+        
+        Assert.That(_sHandsSystem.CountFreeHands(SPlayer), Is.EqualTo(_sHandsSystem.GetHandCount(SPlayer)), "Clumsy mob does not have all hands free before doing anything");
+
+        await SpawnTarget(TargetProto);
+
+        await PlaceInHands(GunProto);
+        
+        await AwaitDoAfters();
+        
+        Assert.That(_sHandsSystem.CountFreeHands(SPlayer), Is.EqualTo(_sHandsSystem.GetHandCount(SPlayer)), "Clumsy mob does not have all hands free");
+        /*foreach (var ev in GetEvents<EquippedHandEvent>(SPlayer))
+        {
+            Assert.That(ev.Cancelled, Is.True, "Clumsy mob did not drop the item");
+        }*/
     }
 }
