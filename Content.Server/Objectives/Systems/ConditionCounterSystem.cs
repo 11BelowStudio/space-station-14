@@ -42,6 +42,9 @@ public sealed partial class CounterConditionSystem : EntitySystem
     {
         if (_compQuery.Resolve(objective, ref objective.Comp))
         {
+            if (TryComp<CompleteBeforeEvacConditionComponent>(objective, out var completeBeforeEvac) && completeBeforeEvac.EvacArrived) 
+                return;
+            
             objective.Comp.Count++;
         }
     }

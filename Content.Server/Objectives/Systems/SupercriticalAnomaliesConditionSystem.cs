@@ -1,3 +1,4 @@
+using Content.Server.Mind;
 using Content.Server.Objectives.Components;
 using Content.Shared.Anomaly.Components;
 using Content.Shared.Objectives.Components;
@@ -6,36 +7,27 @@ namespace Content.Server.Objectives.Systems;
 
 public sealed partial class SupercriticalAnomaliesConditionSystem : EntitySystem
 {
-    [Dependency] private NumberObjectiveSystem _numberObjective = default!;
+    [Dependency] private MindSystem _mind = default!;
+    [Dependency] private CounterConditionSystem _counterCondition = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<AnomalyShutdownEvent>(OnAnomalySupercrit);
-        SubscribeLocalEvent<SupercriticalAnomaliesConditionComponent, ObjectiveGetProgressEvent>(OnGetProgress);
+        SubscribeLocalEvent<SupercriticalAnomaliesConditionComponent, AnomalyShutdownEvent>(OnAnomalySupercrit);
     }
 
-    private void OnAnomalySupercrit(ref AnomalyShutdownEvent args)
+    private void OnAnomalySupercrit(Entity<SupercriticalAnomaliesConditionComponent> ent, ref AnomalyShutdownEvent args)
     {
         if (!args.Supercritical)
             return;
-
-        var query = EntityQueryEnumerator<SupercriticalAnomaliesConditionComponent>();
-        while (query.MoveNext(out var comp))
-        {
-            comp.SupercriticalAnomalies += 1;
-        }
-    }
-
-    private void OnGetProgress(Entity<SupercriticalAnomaliesConditionComponent> ent, ref ObjectiveGetProgressEvent args)
-    {
-        var target = _numberObjective.GetTarget(ent);
-        if (target == 0)
-        {
-            args.Progress = 0f;
+        
+        if (!_mind.TryGetMind(ent.Owner, out var mindUid, out var mind))
             return;
+
+        foreach (var obj in _mind.EnumerateObjectives<SupercriticalAnomaliesConditionComponent>((mindUid, mind)))
+        {
+            _counterCondition.IncreaseCount(obj);
         }
-        args.Progress = MathF.Min((float)ent.Comp.SupercriticalAnomalies / target, 1f);
     }
 }

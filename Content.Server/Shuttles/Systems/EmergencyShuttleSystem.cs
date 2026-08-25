@@ -475,6 +475,8 @@ public sealed partial class EmergencyShuttleSystem : SharedEmergencyShuttleSyste
         }
 
         _commsConsole.UpdateCommsConsoleInterface();
+        var evacArrived = new EmergencyShuttleArrivedEvent();
+        RaiseLocalEvent(ref evacArrived);
     }
 
     private void SetupEmergencyShuttle()
@@ -730,3 +732,9 @@ public sealed partial class EmergencyShuttleSystem : SharedEmergencyShuttleSyste
         GoodLuck,
     }
 }
+
+/// <summary>
+/// Event which gets broadcast once the emergency shuttle has arrived at the station
+/// </summary>
+[ByRefEvent]
+public readonly record struct EmergencyShuttleArrivedEvent;

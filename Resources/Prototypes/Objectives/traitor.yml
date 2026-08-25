@@ -137,6 +137,7 @@
     pool: !type:AliveAiPool
   - type: KillPersonCondition
     requireDead: true
+  - type: CompleteBeforeEvacCondition
 
 # social
 
@@ -365,7 +366,7 @@
 
 # sabotage
 - type: entity
-  parent: BaseTraitorObjective
+  parent: [BaseTraitorObjective, BaseCounterObjective]
   id: SupercritAnomaliesObjective
   description: Nanotrasen is very interested in anomalies with potentially catastrophic consequences. Introduce them to the fire they're playing with.
   components:
@@ -381,6 +382,7 @@
     title: objective-condition-supercrit-anomalies-title
   - type: ObjectiveLimit
     limit: 1
+  - type: CompleteBeforeEvacCondition
 
 # other
 - type: entity
@@ -416,3 +418,4 @@
     title: objective-condition-mail-fraud-title
   - type: ObjectiveLimit
     limit: 1
+  - type: CompleteBeforeEvacCondition
