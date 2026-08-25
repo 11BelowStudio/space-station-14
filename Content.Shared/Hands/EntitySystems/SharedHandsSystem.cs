@@ -565,4 +565,31 @@ public abstract partial class SharedHandsSystem
 
         return freeable;
     }
+
+    /// <summary>
+    /// Attempts to find the HandId of a known Hand belonging to a HandsComponent.
+    /// </summary>
+    /// <param name="ent"></param>
+    /// <param name="hand"></param>
+    /// <param name="handId"></param>
+    /// <returns></returns>
+    public bool TryGetHandId(Entity<HandsComponent?> ent, Hand hand, [NotNullWhen(true)] out string? handId)
+    {
+        if (!Resolve(ent, ref ent.Comp, false))
+        {
+            handId = null;
+            return false;
+        }
+
+        foreach (var id in ent.Comp.Hands.Keys)
+        {
+            if (ent.Comp.Hands[id] == hand)
+            {
+                handId = id;
+                return true;
+            }
+        }
+        handId = null;
+        return false;
+    }
 }

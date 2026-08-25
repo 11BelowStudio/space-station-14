@@ -13,6 +13,7 @@ using Content.Server.NPC.Systems;
 using Content.Server.StationEvents.Components;
 using Content.Shared.Body;
 using Content.Shared.Body.Components;
+using Content.Shared.Clumsy.Components;
 using Content.Shared.CombatMode;
 using Content.Shared.CombatMode.Pacification;
 using Content.Shared.Ghost.Roles.Components;
@@ -34,6 +35,7 @@ using Content.Shared.Popups;
 using Content.Shared.Prying.Components;
 using Content.Shared.Roles;
 using Content.Shared.Speech.EntitySystems;
+using Content.Shared.StatusEffect;
 using Content.Shared.Tag;
 using Content.Shared.Temperature.Components;
 using Content.Shared.Traits.Assorted;
@@ -43,6 +45,7 @@ using Robust.Shared.Audio.Systems;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
+using StatusEffectsSystem = Content.Shared.StatusEffectNew.StatusEffectsSystem;
 
 namespace Content.Server.Zombies;
 
@@ -71,10 +74,12 @@ public sealed partial class ZombieSystem
     [Dependency] private NPCSystem _npc = default!;
     [Dependency] private TagSystem _tag = default!;
     [Dependency] private ISharedPlayerManager _player = default!;
+    [Dependency] private StatusEffectsSystem _statusEffects = default!;
 
     private static readonly ProtoId<TagPrototype> InvalidForGlobalSpawnSpellTag = "InvalidForGlobalSpawnSpell";
     private static readonly ProtoId<TagPrototype> CannotSuicideTag = "CannotSuicide";
     private static readonly ProtoId<NpcFactionPrototype> ZombieFaction = "Zombie";
+    private static readonly ProtoId<StatusEffectPrototype> ZombieClumsy = "StatusEffectClumsyZombie";
     private static readonly string MindRoleZombie = "MindRoleZombie";
     private static readonly List<ProtoId<AntagPrototype>> BannableZombiePrototypes = ["Zombie"];
     internal static readonly HashSet<HumanoidVisualLayers> AdditionalZombieLayers = [HumanoidVisualLayers.Tail, HumanoidVisualLayers.HeadSide, HumanoidVisualLayers.HeadTop, HumanoidVisualLayers.Snout];
@@ -314,9 +319,11 @@ public sealed partial class ZombieSystem
 
         if (TryComp<HandsComponent>(target, out var handsComp))
         {
-            _hands.RemoveHands(target);
-            RemComp(target, handsComp);
+            _hands.DropAll((target, handsComp));
         }
+
+        // the zombie is now clumsy. it will drop anything handed to it.
+        _statusEffects.TryAddStatusEffectDuration(target, ZombieClumsy.Id, null);
 
         // Sloth: What the fuck?
         // How long until compregistry lmao.
