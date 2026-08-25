@@ -382,6 +382,20 @@
   - type: ObjectiveLimit
     limit: 1
 
+- type: entity
+  parent: BaseTraitorObjective
+  id: OverloadAmeObjective
+  name: Overload the AME
+  description: Nanotrasen relies on the Antimatter Engine as their backup power source. It would be a shame if it got overloaded.
+  components:
+  - type: Objective
+    difficulty: 3
+    icon:
+      sprite: Structures/Power/Generation/ame.rsi
+      state: static
+  - type: ObjectiveLimit
+    limit: 1
+
 # other
 - type: entity
   parent: BaseTraitorObjective

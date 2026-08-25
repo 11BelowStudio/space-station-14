@@ -50,6 +50,7 @@
   id: TraitorObjectiveGroupSabotage
   weights:
     SupercritAnomaliesObjective: 1
+    OverloadAmeObjective: 1
 
 #misc objectives that don't fall other another category
 - type: weightedRandom

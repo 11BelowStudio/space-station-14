@@ -130,7 +130,11 @@ public sealed partial class AmeControllerSystem : EntitySystem
         UpdateDisplay(uid, controller.Stability, controller);
 
         if (controller.Stability <= 0)
+        {
+            var ev = new AmeOverloadedEvent(uid);
+            RaiseLocalEvent(uid, ref ev, true);
             group.ExplodeCores();
+        }
     }
 
     public void UpdateUi(EntityUid uid, AmeControllerComponent? controller = null)
@@ -395,3 +399,10 @@ public sealed partial class AmeControllerSystem : EntitySystem
         return true;
     }
 }
+
+/// <summary>
+/// Event broadcast after the AME blows up from being overloaded
+/// </summary>
+/// <param name="AmeController">The controller of the AME which was overloaded</param>
+[ByRefEvent]
+public readonly record struct AmeOverloadedEvent(EntityUid AmeController);
