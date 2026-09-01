@@ -21,6 +21,7 @@ namespace Content.Server.Spreader;
 public sealed partial class SpreaderSystem : EntitySystem
 {
     [Dependency] private IRobustRandom _robustRandom = default!;
+    [Dependency] private IGameTiming _timing = default!;
     [Dependency] private SharedMapSystem _map = default!;
     [Dependency] private TagSystem _tag = default!;
     [Dependency] private TurfSystem _turf = default!;
@@ -29,8 +30,7 @@ public sealed partial class SpreaderSystem : EntitySystem
     [Dependency] private EntityQuery<AirtightComponent> _airtightQuery = default!;
     [Dependency] private EntityQuery<DockingComponent> _dockingQuery = default!;
     
-    [Dependency] private readonly IPrototypeManager _prototype = default!;
-    [Dependency] private readonly IGameTiming _timing = default!;
+
 
     /// <summary>
     /// Cached maximum number of updates per spreader prototype. This is applied per-grid.
@@ -42,9 +42,7 @@ public sealed partial class SpreaderSystem : EntitySystem
     /// </summary>
     // TODO PERFORMANCE Assign each prototype to an index and convert dictionary to array
     private readonly Dictionary<EntityUid, Dictionary<string, int>> _gridUpdates = [];
-
-    private EntityQuery<EdgeSpreaderComponent> _query;
-
+    
     private TimeSpan _spreadInterval = TimeSpan.FromSeconds(1);
     public const float SpreadCooldownSeconds = 1;
 
@@ -59,8 +57,6 @@ public sealed partial class SpreaderSystem : EntitySystem
 
         SubscribeLocalEvent<EdgeSpreaderComponent, EntityTerminatingEvent>(OnTerminating);
         SetupPrototypes();
-
-        _query = GetEntityQuery<EdgeSpreaderComponent>();
     }
 
     private void OnPrototypeReload(PrototypesReloadedEventArgs obj)
@@ -393,7 +389,7 @@ public sealed partial class SpreaderSystem : EntitySystem
         if (!TryComp(origin, out EdgeSpreaderComponent? sourceSpreader))
             return;
         TimeSpan nextEmission = _timing.CurTime +
-                                TimeSpan.FromSeconds(1f / _prototype.Index<EdgeSpreaderPrototype>(sourceSpreader.Id)
+                                TimeSpan.FromSeconds(1f / ProtoMan.Index<EdgeSpreaderPrototype>(sourceSpreader.Id)
                                     .UpdatesPerSecond);
 
         SpreaderGridComponent? spreaderGrid;
