@@ -1,8 +1,11 @@
 using System.Linq;
 using Content.Server.Administration.Logs;
+using Content.Server.Administration.Managers;
 using Content.Server.Antag;
+using Content.Server.Chat.Managers;
 using Content.Server.EUI;
 using Content.Server.GameTicking.Rules.Components;
+using Content.Server.Ghost;
 using Content.Server.Mind;
 using Content.Server.Popups;
 using Content.Server.Revolutionary;
@@ -31,6 +34,7 @@ using Robust.Shared.Timing;
 using Content.Shared.Cuffs.Components;
 using Robust.Shared.Player;
 using Content.Shared.Mindshield;
+using Content.Shared.Roles;
 
 namespace Content.Server.GameTicking.Rules;
 
@@ -45,6 +49,9 @@ public sealed partial class RevolutionaryRuleSystem : GameRuleSystem<Revolutiona
     [Dependency] private IAdminLogManager _adminLogManager = default!;
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private ISharedPlayerManager _player = default!;
+    [Dependency] private IBanManager _ban = default!;
+    [Dependency] private IChatManager _chatMan = default!;
+    [Dependency] private GhostSystem _ghost = default!;
     [Dependency] private MindSystem _mind = default!;
     [Dependency] private MobStateSystem _mobState = default!;
     [Dependency] private NpcFactionSystem _npcFaction = default!;
@@ -58,6 +65,7 @@ public sealed partial class RevolutionaryRuleSystem : GameRuleSystem<Revolutiona
     //Used in OnPostFlash, no reference to the rule component is available
     public readonly ProtoId<NpcFactionPrototype> RevolutionaryNpcFaction = "Revolutionary";
     public readonly ProtoId<NpcFactionPrototype> RevPrototypeId = "Rev";
+    private static readonly List<ProtoId<AntagPrototype>> BannableRevolutionaryPrototypes = ["Rev"];
 
     public override void Initialize()
     {
@@ -157,6 +165,25 @@ public sealed partial class RevolutionaryRuleSystem : GameRuleSystem<Revolutiona
         _mindShield.GetMindshieldStatus(ev.Target, out var isMindshielded, out _);
         if (attemptConvertEv.Cancelled || isMindshielded)
             return;
+
+        // Check for roleban only if the conversion hasn't been blocked
+        if (TryComp<ActorComponent>(ev.Target, out var actor) &&
+            _ban.IsRoleBanned(actor.PlayerSession, BannableRevolutionaryPrototypes))
+        {
+            var sess = actor.PlayerSession;
+            var message = Loc.GetString("rev-roleban-ghosted");
+
+            if (_mind.TryGetMind(sess, out var playerMindEnt, out var playerMind))
+            {
+                // Detach
+                _ghost.SpawnGhost((playerMindEnt, playerMind), ev.Target);
+
+                // Notify
+                _chatMan.DispatchServerMessage(sess, message);
+            }
+            else
+                Log.Error($"Mind for session '{sess}' could not be found");
+        }
 
         _npcFaction.AddFaction(ev.Target, RevolutionaryNpcFaction);
         var revComp = EnsureComp<RevolutionaryComponent>(ev.Target);

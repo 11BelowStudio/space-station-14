@@ -28,6 +28,8 @@ rev-role-greeting =
 
 rev-briefing = Help the head revolutionaries kill, restrain, or convert all members of Command to take over the station.
 
+rev-roleban-ghosted = You have been ghosted because you are banned from playing as a Revolutionary.
+
 ## General
 
 rev-title = Revolutionaries
