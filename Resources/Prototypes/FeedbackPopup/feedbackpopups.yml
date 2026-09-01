@@ -19,10 +19,24 @@
   showRoundEnd: false
 
 - type: feedbackPopup
-  id: GibbingFeedback
+  id: XenoborgExtractorFeedback
   popupOrigin: wizden_master
-  title: "[bold]Feedback on Gibbing Removal[/bold]"
+  title: "[bold]The [color=deepskyblue]xenoborg[/color] extractor [scramble chars=\"xenoborg-##][{}||,.<>\" rate=40 length=5][/bold]"
   description: >-
-    We're testing out the removal of gibbing to see how it affects the game. Please leave feedback on how your experience was removed/worsened so we can account for it!
-  responseType: "Experimental Feedback"
-  responseLink: "https://forum.spacestation14.com/t/gibbing-removal-feedback/26320"
+    Please share feedback on the new xenoborg extractor and crystal, and how these additions affect xenoborg gameplay.
+  responseType: "Feedback Thread"
+  responseLink: "https://forum.spacestation14.com/t/xenoborg-extractor/26689"
+  showRoundEnd: true
+  ruleWhitelist:
+    components:
+    - XenoborgsRule
+
+- type: feedbackPopup
+  id: StructureRebalanceFeedback
+  popupOrigin: wizden_master
+  title: "[bold]Feedback for structure health rebalance.[/bold]"
+  description: >-
+    Please share feedback on the changes to damage resistances, health values, and destruction behaviors for structures.
+  responseType: "Feedback Thread"
+  responseLink: "https://forum.spacestation14.com/t/structure-rebalance-discussion-and-feedback/28228"
+  showRoundEnd: true
