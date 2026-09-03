@@ -488,8 +488,15 @@ namespace Content.Shared.Cuffs
 
             var ev = new TargetHandcuffedEvent(user);
             RaiseLocalEvent(target, ref ev);
-
-            UpdateHeldItems(target, handcuff, component);
+            if (ev.Cancelled)
+            {
+                _container.Remove(handcuff, component.Container);
+                return false;
+            }
+            else
+            {
+                UpdateHeldItems(target, handcuff, component);
+            }
 
             return true;
         }
@@ -889,7 +896,7 @@ namespace Content.Shared.Cuffs
     /// Relayed to their held items.
     /// </summary>
     [ByRefEvent]
-    public record struct TargetHandcuffedEvent(EntityUid User) : IInventoryRelayEvent
+    public record struct TargetHandcuffedEvent(EntityUid User, bool Cancelled = false) : IInventoryRelayEvent
     {
         /// <summary>
         /// All slots to relay to

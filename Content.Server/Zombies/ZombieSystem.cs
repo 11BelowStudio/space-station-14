@@ -1,6 +1,5 @@
 using Content.Shared.NPC.Prototypes;
 using Content.Server.Actions;
-using Content.Server.Body.Systems;
 using Content.Server.Chat;
 using Content.Server.Chat.Systems;
 using Content.Server.Emoting.Systems;
@@ -28,6 +27,7 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 using Content.Server.Ghost.Roles.Components;
+using Content.Shared.Cuffs;
 
 namespace Content.Server.Zombies
 {
@@ -73,6 +73,7 @@ namespace Content.Server.Zombies
             SubscribeLocalEvent<ZombieComponent, MindAddedMessage>(OnMindAdded);
             SubscribeLocalEvent<ZombieComponent, MindRemovedMessage>(OnMindRemoved);
             SubscribeLocalEvent<ZombieComponent, AttemptConvertRevolutionaryEvent>(OnAttemptConvert);
+            SubscribeLocalEvent<ZombieComponent, TargetHandcuffedEvent>(OnHandcuffed);
 
             SubscribeLocalEvent<PendingZombieComponent, MapInitEvent>(OnPendingMapInit);
             SubscribeLocalEvent<PendingZombieComponent, BeforeRemoveAnomalyOnDeathEvent>(OnBeforeRemoveAnomalyOnDeath);
@@ -329,6 +330,14 @@ namespace Content.Server.Zombies
         }
 
         private void OnAttemptConvert(Entity<ZombieComponent> ent, ref AttemptConvertRevolutionaryEvent args)
+        {
+            args.Cancelled = true;
+        }
+
+        /// <summary>
+        /// ensures that zombies cannot be stuck in handcuffs, unable to do anything
+        /// </summary>
+        private void OnHandcuffed(Entity<ZombieComponent> ent, ref TargetHandcuffedEvent args)
         {
             args.Cancelled = true;
         }
