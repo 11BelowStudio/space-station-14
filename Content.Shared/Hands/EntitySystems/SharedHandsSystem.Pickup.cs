@@ -176,8 +176,8 @@ public abstract partial class SharedHandsSystem
     /// Checks whether a given item will fit into a specific user's hand.
     /// Unless otherwise specified, this will also check the general CanPickup action blocker.
     /// </summary>
-    /// <param name="checkHandContents">if true, will check if hand is empty/current held item can be dropped. if false, current contents are ignored (will only check if hand could theoretically hold the item)</param>
-    public bool CanPickupToHand(EntityUid uid, EntityUid entity, string handId, bool checkActionBlocker = true, bool showPopup = false, HandsComponent? handsComp = null, ItemComponent? item = null, bool checkHandContents = true)
+    /// <param name="ignoreHandContents">if true, will ignore anything currently held in hands (will only check if the item _could_ be put into hands if held item was removed). leave as false to check if hand is unoccupied.</param>
+    public bool CanPickupToHand(EntityUid uid, EntityUid entity, string handId, bool checkActionBlocker = true, bool showPopup = false, HandsComponent? handsComp = null, ItemComponent? item = null, bool ignoreHandContents = false)
     {
         if (!Resolve(uid, ref handsComp, false))
             return false;
@@ -185,7 +185,7 @@ public abstract partial class SharedHandsSystem
         if (!ContainerSystem.TryGetContainer(uid, handId, out var handContainer))
             return false;
 
-        if (handContainer.ContainedEntities.FirstOrNull() != null)
+        if (!ignoreHandContents && handContainer.ContainedEntities.FirstOrNull() != null)
             return false;
 
         // Huh, seems kinda weird that this system passes item comp around
@@ -204,7 +204,7 @@ public abstract partial class SharedHandsSystem
         if (!CheckWhitelists((uid, handsComp), handId, entity))
             return false;
 
-        if (checkHandContents && ContainerSystem.TryGetContainingContainer((entity, null, null), out var container))
+        if (ContainerSystem.TryGetContainingContainer((entity, null, null), out var container))
         {
             if (!ContainerSystem.CanRemove(entity, container))
                 return false;
@@ -216,7 +216,7 @@ public abstract partial class SharedHandsSystem
         }
 
         // check can insert (including raising attempt events).
-        return ContainerSystem.CanInsert(entity, handContainer, assumeEmpty: !checkHandContents);
+        return ContainerSystem.CanInsert(entity, handContainer, assumeEmpty: ignoreHandContents);
     }
 
     /// <summary>
