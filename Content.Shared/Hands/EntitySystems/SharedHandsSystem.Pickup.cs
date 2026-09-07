@@ -176,8 +176,8 @@ public abstract partial class SharedHandsSystem
     /// Checks whether a given item will fit into a specific user's hand.
     /// Unless otherwise specified, this will also check the general CanPickup action blocker.
     /// </summary>
-    /// <param name="checkCanDropHeld">if true, will check if current contents of hand can be dropped (if not empty). if false, current contents are ignored (will only check if hand could theoretically hold the item)</param>
-    public bool CanPickupToHand(EntityUid uid, EntityUid entity, string handId, bool checkActionBlocker = true, bool showPopup = false, HandsComponent? handsComp = null, ItemComponent? item = null, bool checkCanDropHeld = true)
+    /// <param name="checkHandContents">if true, will check if hand is empty/current held item can be dropped. if false, current contents are ignored (will only check if hand could theoretically hold the item)</param>
+    public bool CanPickupToHand(EntityUid uid, EntityUid entity, string handId, bool checkActionBlocker = true, bool showPopup = false, HandsComponent? handsComp = null, ItemComponent? item = null, bool checkHandContents = true)
     {
         if (!Resolve(uid, ref handsComp, false))
             return false;
@@ -204,7 +204,7 @@ public abstract partial class SharedHandsSystem
         if (!CheckWhitelists((uid, handsComp), handId, entity))
             return false;
 
-        if (checkCanDropHeld && ContainerSystem.TryGetContainingContainer((entity, null, null), out var container))
+        if (checkHandContents && ContainerSystem.TryGetContainingContainer((entity, null, null), out var container))
         {
             if (!ContainerSystem.CanRemove(entity, container))
                 return false;
@@ -216,7 +216,7 @@ public abstract partial class SharedHandsSystem
         }
 
         // check can insert (including raising attempt events).
-        return ContainerSystem.CanInsert(entity, handContainer, assumeEmpty: !checkCanDropHeld);
+        return ContainerSystem.CanInsert(entity, handContainer, assumeEmpty: !checkHandContents);
     }
 
     /// <summary>
