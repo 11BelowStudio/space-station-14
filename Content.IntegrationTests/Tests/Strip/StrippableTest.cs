@@ -8,6 +8,24 @@ public sealed class StrippableTest : InteractionTest
 {
     protected override string PlayerPrototype => "MobHuman";
 
+    [TestPrototypes] private const string StrippableTestProtos = @"
+type: inventoryTemplate
+  id: SlotlessInventoryTemplate
+  slots: []
+
+type: entity
+  id: TotallyUnstrippableEntity
+  parent: [BaseMob, StripableInventoryBase]
+  components:
+  - type: Inventory
+    templateId: SlotlessInventoryTemplate
+  - type: Hands
+    startingHands:
+      hand_left:
+        location: Left
+    canBeStripped: false
+";
+
     /// <summary>
     /// Tests that the stripping UI is opened when drag dropping from another mob onto the player.
     /// </summary>
