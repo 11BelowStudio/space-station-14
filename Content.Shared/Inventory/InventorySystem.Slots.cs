@@ -237,6 +237,23 @@ public partial class InventorySystem : EntitySystem
     }
 
     /// <summary>
+    /// iterates over slots of entity's inventory, checks if any slots are *not* <c>StripHidden</c>
+    /// </summary>
+    /// <param name="ent">entity which may or may not have an InventoryComponent</param>
+    /// <returns>true if entity has InventoryComponent and has at least one slot which isn't <c>StripHidden</c></returns>
+    public bool CanStripInventory(Entity<InventoryComponent?> ent)
+    {
+        if (!Resolve(ent, ref ent.Comp, false))
+            return false;
+        foreach (var slot in ent.Comp.Slots)
+        {
+            if (!slot.StripHidden)
+                return true;
+        }
+        return false;
+    }
+    
+    /// <summary>
     /// Enumerator for iterating over an inventory's slot containers. Also has methods that skip empty containers.
     /// It should be safe to add or remove items while enumerating.
     /// </summary>

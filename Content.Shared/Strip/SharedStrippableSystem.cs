@@ -61,6 +61,12 @@ public abstract partial class SharedStrippableSystem : EntitySystem
         if (args.Hands == null || !args.CanAccess || !args.CanInteract || args.Target == args.User)
             return;
 
+        if ( !HasComp<BypassInteractionChecksComponent>(args.User)
+             && !_handsSystem.CanStripHands(args.Target)
+             && !_inventorySystem.CanStripInventory(args.Target)
+        )
+            return;
+
         Verb verb = new()
         {
             Text = Loc.GetString("strip-verb-get-data-text"),
@@ -74,6 +80,12 @@ public abstract partial class SharedStrippableSystem : EntitySystem
     private void AddStripExamineVerb(EntityUid uid, StrippableComponent component, GetVerbsEvent<ExamineVerb> args)
     {
         if (args.Hands == null || !args.CanAccess || !args.CanInteract || args.Target == args.User)
+            return;
+
+        if ( !HasComp<BypassInteractionChecksComponent>(args.User)
+             && !_handsSystem.CanStripHands(args.Target)
+             && !_inventorySystem.CanStripInventory(args.Target)
+           )
             return;
 
         ExamineVerb verb = new()

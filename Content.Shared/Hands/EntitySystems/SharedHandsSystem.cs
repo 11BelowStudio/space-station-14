@@ -568,4 +568,17 @@ public abstract partial class SharedHandsSystem
 
         return freeable;
     }
+
+    /// <summary>
+    /// Checks if an entity has hands which <c>CanBeStripped</c>
+    /// </summary>
+    /// <param name="ent">entity which may or may not have hands</param>
+    /// <returns>true if hands exist and they <c>CanBeStripped</c>. False if no hands/unstrippable hands</returns>
+    public bool CanStripHands(Entity<HandsComponent?> ent)
+    {
+        if (!Resolve(ent, ref ent.Comp, false))
+            return false;
+
+        return ent.Comp.CanBeStripped;
+    }
 }
