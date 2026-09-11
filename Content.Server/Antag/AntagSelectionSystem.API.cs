@@ -347,7 +347,8 @@ public sealed partial class AntagSelectionSystem
     /// </summary>
     /// <param name="session">The player chosen to be an antag</param>
     /// <param name="data">The briefing data</param>
-    private void SendBriefing(
+    [PublicAPI]
+    public void SendBriefing(
         ICommonSession? session,
         BriefingData? data)
     {

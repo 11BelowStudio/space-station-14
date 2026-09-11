@@ -2,6 +2,7 @@ using Content.Server.Antag;
 using Content.Server.GameTicking.Rules;
 using Content.Server.GameTicking.Rules.Components;
 using Content.Server.Silicons.Borgs;
+using Content.Shared.Antag;
 using Content.Shared.Destructible;
 using Content.Shared.Mind.Components;
 using Content.Shared.Roles;
@@ -21,19 +22,9 @@ public sealed partial class XenoborgSystem : EntitySystem
     [Dependency] private SharedRoleSystem _roles = default!;
     [Dependency] private XenoborgsRuleSystem _xenoborgsRule = default!;
 
-    private static readonly Color XenoborgBriefingColor = Color.BlueViolet;
-    /// <summary>
-    /// The mindrole associated with the xenoborg
-    /// </summary>
-    private static readonly EntProtoId<MindRoleComponent> MindRoleXenoborg = "MindRoleXenoborg";
-    /// <summary>
-    /// The text that is sent when you become a xenoborg
-    /// </summary>
-    private static readonly LocId BriefingTextXenoborg = "xenoborgs-welcome";
-    /// <summary>
-    /// Briefing sound when you become a xenoborg
-    /// </summary>
-    private static readonly SoundSpecifier BriefingSoundXenoborg = new SoundPathSpecifier("/Audio/Ambience/Antag/xenoborg_start.ogg");
+    private static readonly ProtoId<AntagSpecifierPrototype> XenoborgAntagSpecifier = "Xenoborg";
+    // todo - use mothership specifier instead if it's a mothership
+    private static readonly ProtoId<AntagSpecifierPrototype> MothershipAntagSpecifier = "Mothership";
 
     public override void Initialize()
     {
@@ -94,15 +85,22 @@ public sealed partial class XenoborgSystem : EntitySystem
 
     private void OnXenoborgMindAdded(EntityUid ent, XenoborgComponent comp, MindAddedMessage args)
     {
-        _roles.MindAddRole(args.Mind, MindRoleXenoborg, silent: true);
+        if (args.TransferEntity != null)
+            return;
+
+        if (!ProtoMan.TryIndex<AntagSpecifierPrototype>(XenoborgAntagSpecifier, out var xenoAntag))
+        {
+            Log.Error($"AntagSpecifier not found: {xenoAntag}");
+            return;
+        }
+        
+        _roles.MindAddRoles(args.Mind, xenoAntag.MindRoles, silent: true);
 
         if (!TryComp<ActorComponent>(ent, out var actorComp))
             return;
 
         _antag.SendBriefing(actorComp.PlayerSession,
-            Loc.GetString(BriefingTextXenoborg),
-            XenoborgBriefingColor,
-            BriefingSoundXenoborg
+            xenoAntag.Briefing
         );
     }
 
@@ -110,6 +108,18 @@ public sealed partial class XenoborgSystem : EntitySystem
     {
         // We don't need to update the mind if the mind is being fully detached!
         if (args.TransferEntity != null)
-            _roles.MindRemoveRole(args.Mind.Owner, MindRoleXenoborg);
+        {
+            if (!ProtoMan.TryIndex<AntagSpecifierPrototype>(XenoborgAntagSpecifier, out var xenoAntag))
+            {
+                Log.Error($"AntagSpecifier not found: {xenoAntag}");
+                return;
+            }
+
+            foreach (var role in xenoAntag!.MindRoles!)
+            {
+                _roles.MindRemoveRole(args.Mind.Owner, new EntProtoId<MindRoleComponent>(role));
+            }
+        }
+            
     }
 }
